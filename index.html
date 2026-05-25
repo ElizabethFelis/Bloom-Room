@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bloom Room</title>
+
+  <style>
+    /* colors ig */
+    :root {
+      --cream: #fff7ec;
+      --paper: #fffdf8;
+      --ink: #332923;
+      --muted: #7b6f67;
+      --line: rgba(75, 54, 42, 0.18);
+      --soft-pink: #ffe3ec;
+      --soft-lavender: #eee5ff;
+      --soft-green: #e8ffe9;
+      --red: #b5142b;
+      --deep-red: #52000d;
+      --dark: #160b10;
+      --shadow: rgba(75, 45, 30, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    /* page bg stuff */
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 12%, rgba(255, 207, 222, 0.55), transparent 30%),
+        radial-gradient(circle at 85% 18%, rgba(232, 255, 233, 0.65), transparent 28%),
+        radial-gradient(circle at 55% 92%, rgba(238, 229, 255, 0.70), transparent 35%),
+        linear-gradient(135deg, #fff9ef, #fff0f5 48%, #f5fff2);
+      transition: background 700ms ease, color 700ms ease, filter 700ms ease;
+    }
+
+    body.warning-stage {
+      background:
+        radial-gradient(circle at 20% 18%, rgba(255, 213, 223, 0.5), transparent 30%),
+        radial-gradient(circle at 80% 85%, rgba(181, 20, 43, 0.16), transparent 34%),
+        linear-gradient(135deg, #fff8ee, #ffe8ee 45%, #f5efe8);
+    }
+
+    body.archive-stage {
+      color: #fff1f3;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(181, 20, 43, 0.45), transparent 24%),
+        radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.08), transparent 30%),
+        linear-gradient(135deg, #1a070d, #330711 48%, #070305);
+      filter: contrast(1.04) saturate(0.92);
+    }
+
+    /* red flash thing */
+    .red-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: rgba(181, 20, 43, 0.55);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .red-flash.show { animation: redFlash 360ms ease; }
+
+    @keyframes redFlash {
+      0% { opacity: 0; }
+      25% { opacity: 0.75; }
+      100% { opacity: 0; }
+    }
+
+    /* texture and dark edges */
+    .grain, .vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .grain {
+      z-index: 70;
+      opacity: 0.055;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .vignette {
+      z-index: 71;
+      opacity: 0.24;
+      background: radial-gradient(circle at center, transparent 58%, rgba(82,0,13,0.22));
+      transition: opacity 700ms ease;
+    }
+
+    body.archive-stage .vignette { opacity: 0.75; }
+
+    /* layout */
+    .wrap {
+      width: min(1080px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 30px 0 52px;
+      position: relative;
+      z-index: 2;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    body.archive-stage header { color: rgba(255, 241, 243, 0.7); }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-style: italic;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.45);
+      transition: 500ms ease;
+    }
+
+    body.warning-stage .dot {
+      background: #ffdce2;
+      border-color: rgba(181,20,43,0.35);
+    }
+
+    body.archive-stage .dot {
+      background: var(--red);
+      border-color: rgba(255,255,255,0.24);
+      box-shadow: 0 0 18px rgba(181,20,43,0.8);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(330px, 0.88fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      background: rgba(255, 253, 248, 0.86);
+      border: 1px solid var(--line);
+      box-shadow: 0 20px 55px var(--shadow);
+      transition: background 700ms ease, border 700ms ease, box-shadow 700ms ease;
+    }
+
+    body.warning-stage .card {
+      background: rgba(255, 250, 243, 0.88);
+      border-color: rgba(181, 20, 43, 0.16);
+    }
+
+    body.archive-stage .card {
+      background: rgba(20, 7, 11, 0.72);
+      border-color: rgba(255, 180, 191, 0.24);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.38);
+    }
+
+    .main { min-height: 650px; padding: 32px; }
+    .eliza-panel { min-height: 650px; padding: 24px; display: flex; flex-direction: column; }
+
+    /* left side */
+    h1 {
+      position: relative;
+      z-index: 2;
+      margin: 0;
+      font-size: clamp(38px, 5vw, 64px);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+      font-weight: 500;
+    }
+
+    .subtitle {
+      position: relative;
+      z-index: 2;
+      margin: 14px 0 26px;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.62;
+    }
+
+    body.archive-stage .subtitle { color: rgba(255,241,243,0.70); }
+
+    .garden-stage {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      gap: 14px;
+    }
+
+    .prompt {
+      padding: 20px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.62);
+      border: 1px solid rgba(75,54,42,0.12);
+    }
+
+    body.archive-stage .prompt {
+      background: rgba(255,255,255,0.055);
+      border-color: rgba(255,255,255,0.13);
+    }
+
+    .prompt-kicker {
+      margin-bottom: 9px;
+      color: #9e6372;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: lowercase;
+      font-style: italic;
+    }
+
+    body.archive-stage .prompt-kicker { color: #ffb8c2; }
+
+    .prompt-text {
+      min-height: 70px;
+      font-size: 19px;
+      line-height: 1.58;
+    }
+
+    /* buttons */
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    button {
+      appearance: none;
+      text-align: left;
+      border: 1px solid rgba(75,54,42,0.16);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.56);
+      color: var(--ink);
+      padding: 13px 15px;
+      font-family: inherit;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 180ms ease, background 180ms ease, border 180ms ease, color 180ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: #fff;
+      border-color: rgba(181,20,43,0.25);
+    }
+
+    button.primary { background: rgba(255, 255, 255, 0.76); }
+
+    button.danger {
+      color: var(--deep-red);
+      border-color: rgba(181,20,43,0.28);
+      background: rgba(255, 224, 230, 0.64);
+    }
+
+    body.archive-stage button {
+      color: #fff1f3;
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.17);
+    }
+
+    body.archive-stage button.danger {
+      color: #ffd2d9;
+      border-color: rgba(255, 112, 128, 0.45);
+      background: rgba(181, 20, 43, 0.18);
+    }
+
+    /* input */
+    .field { margin-top: 8px; display: grid; gap: 8px; }
+    label { color: var(--muted); font-size: 14px; font-style: italic; }
+    body.archive-stage label { color: rgba(255,241,243,0.68); }
+
+    input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 15px;
+      outline: none;
+      border: 1px solid rgba(75,54,42,0.17);
+      background: rgba(255,255,255,0.72);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 16px;
+      transition: 220ms ease;
+    }
+
+    input:focus {
+      border-color: rgba(181,20,43,0.36);
+      box-shadow: 0 0 0 4px rgba(181,20,43,0.08);
+    }
+
+    body.archive-stage input {
+      color: #fff1f3;
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    /* stuff eliza doesnt want u to click */
+    .corner-title {
+      position: relative;
+      z-index: 2;
+      margin: 22px 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    body.archive-stage .corner-title { color: rgba(255,241,243,0.68); }
+
+    .forbidden-zone {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .forbidden {
+      min-height: 72px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px dashed rgba(75,54,42,0.18);
+      background: rgba(255,255,255,0.42);
+      color: rgba(51,41,35,0.72);
+      cursor: pointer;
+      transition: 200ms ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .forbidden:hover {
+      color: var(--deep-red);
+      background: rgba(255,232,236,0.72);
+      border-color: rgba(181,20,43,0.34);
+      transform: translateY(-1px);
+    }
+
+    body.archive-stage .forbidden {
+      color: rgba(255,241,243,0.68);
+      background: rgba(255,255,255,0.055);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    body.archive-stage .forbidden:hover {
+      color: #ffd2d9;
+      background: rgba(181,20,43,0.17);
+      border-color: rgba(255,112,128,0.34);
+    }
+
+    .forbidden strong { font-size: 15px; font-weight: 500; }
+    .forbidden span { font-size: 13px; opacity: 0.62; }
+
+    /* hidden archive */
+    .archive {
+      display: none;
+      position: relative;
+      z-index: 2;
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,112,128,0.26);
+      background: rgba(181,20,43,0.10);
+    }
+
+    .archive.show { display: block; animation: fadeUp 600ms ease both; }
+    .archive h2 { margin: 0 0 10px; font-size: 22px; font-weight: 500; }
+    .archive p { margin: 8px 0; color: rgba(255,241,243,0.72); line-height: 1.55; }
+
+    .archive-records {
+      margin-top: 13px;
+      display: grid;
+      gap: 8px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 14px;
+      color: #ffd2d9;
+    }
+
+    .record {
+      padding: 9px 10px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    /* eliza side */
+    .eliza-top {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .eliza-top h2 { margin: 0; font-size: 20px; font-weight: 500; }
+    .mood { color: var(--muted); font-size: 13px; font-style: italic; }
+    body.archive-stage .mood { color: rgba(255,241,243,0.64); }
+
+    .portrait-wrap {
+      position: relative;
+      z-index: 2;
+      height: 360px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 24px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,0.96), rgba(255,244,232,0.88) 48%, rgba(255,224,236,0.65));
+      border: 1px solid rgba(75,54,42,0.13);
+      transition: background 700ms ease, border 700ms ease;
+    }
+
+    body.warning-stage .portrait-wrap {
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,0.96), rgba(255,235,240,0.88) 48%, rgba(255,195,207,0.58));
+    }
+
+    body.archive-stage .portrait-wrap {
+      background:
+        radial-gradient(circle at center, rgba(255,230,235,0.95), rgba(181,20,43,0.20) 48%, rgba(0,0,0,0.30));
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    /* eliza image position, change translate if she runs away again */
+    .portrait {
+      width: 720px;
+      max-width: none;
+      max-height: none;
+      object-fit: contain;
+      object-position: center 32%;
+      mix-blend-mode: normal;
+      filter: drop-shadow(0 18px 24px rgba(0,0,0,0.20));
+      animation: none;
+      transform: translate(-160px, -200px);
+      transition: filter 500ms ease, opacity 200ms ease;
+    }
+
+    body.warning-stage .portrait {
+      filter: drop-shadow(0 20px 28px rgba(0,0,0,0.22)) saturate(0.94);
+    }
+
+    body.archive-stage .portrait {
+      animation: none;
+      transform: translate(-160px, -200px);
+      filter: drop-shadow(0 20px 28px rgba(0,0,0,0.28)) contrast(1.05) saturate(0.78);
+    }
+
+    /* portrait flicker */
+    .portrait-glitch {
+      animation: portraitGlitch 160ms steps(2, end) 7;
+      filter: drop-shadow(2px 0 rgba(181,20,43,0.8)) drop-shadow(-2px 0 rgba(255,255,255,0.45)) drop-shadow(0 18px 24px rgba(0,0,0,0.20));
+    }
+
+    @keyframes portraitGlitch {
+      0% { opacity: 1; }
+      25% { opacity: 0.65; }
+      50% { opacity: 1; }
+      75% { opacity: 0.50; }
+      100% { opacity: 1; }
+    }
+
+    /* eliza talks here */
+    .dialogue {
+      position: relative;
+      z-index: 2;
+      margin-top: 14px;
+      min-height: 145px;
+      padding: 17px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(75,54,42,0.12);
+      transition: background 700ms ease, border 700ms ease;
+    }
+
+    body.archive-stage .dialogue {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    .speaker {
+      margin-bottom: 8px;
+      color: #9e6372;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    body.archive-stage .speaker { color: #ffb8c2; }
+
+    .dialogue-text {
+      font-size: 18px;
+      line-height: 1.58;
+    }
+
+    /* depth bar */
+    .meter-wrap {
+      position: relative;
+      z-index: 2;
+      margin-top: 16px;
+    }
+
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+
+    body.archive-stage .meter-label { color: rgba(255,241,243,0.65); }
+
+    .meter {
+      height: 10px;
+      border-radius: 99px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.38);
+      border: 1px solid rgba(75,54,42,0.10);
+    }
+
+    body.archive-stage .meter {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.12);
+    }
+
+    .fill {
+      height: 100%;
+      width: 4%;
+      border-radius: inherit;
+      background: #ffffff;
+      transition: width 500ms ease, background 500ms ease;
+    }
+
+    body.warning-stage .fill { background: #ffd3da; }
+    body.archive-stage .fill { background: var(--red); }
+
+    /* ending popup */
+    .ending-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: none;
+      place-items: center;
+      padding: 28px;
+      background: rgba(22, 5, 9, 0.82);
+    }
+
+    .ending-overlay.show { display: grid; }
+
+    .ending-card {
+      width: min(720px, 100%);
+      border-radius: 28px;
+      padding: 30px;
+      background: #fffdf8;
+      color: #332923 !important;
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 30px 90px rgba(0,0,0,0.35);
+    }
+
+    .ending-card h2 {
+      margin: 0 0 12px;
+      font-size: 30px;
+      font-weight: 500;
+      color: #332923 !important;
+    }
+
+    .ending-card p {
+      color: #7b6f67 !important;
+      line-height: 1.65;
+      font-size: 17px;
+    }
+
+    .ending-line { color: #52000d !important; }
+
+    .ending-button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 13px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(82, 0, 13, 0.25);
+      background: #fff0f3 !important;
+      color: #52000d !important;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .ending-button:hover {
+      background: #ffdce4 !important;
+      border-color: rgba(82, 0, 13, 0.45);
+      transform: translateY(-1px);
+    }
+
+    /* glitch text */
+    .glitch {
+      animation: glitch 150ms steps(2, end) 7;
+      text-shadow: 2px 0 rgba(181,20,43,0.8), -2px 0 rgba(255,255,255,0.55);
+    }
+
+    @keyframes glitch {
+      0% { transform: translate(0,0); }
+      25% { transform: translate(2px,-1px); }
+      50% { transform: translate(-3px,1px); }
+      75% { transform: translate(1px,2px); }
+      100% { transform: translate(0,0); }
+    }
+
+    /* shake */
+    .shake { animation: shake 250ms ease; }
+    @keyframes shake {
+      0%,100% { transform: translate(0,0); }
+      20% { transform: translate(-5px,2px); }
+      40% { transform: translate(6px,-1px); }
+      60% { transform: translate(-3px,-2px); }
+      80% { transform: translate(3px,1px); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* works on smaller screen */
+    @media (max-width: 850px) {
+      .grid { grid-template-columns: 1fr; }
+      .main, .eliza-panel { min-height: auto; }
+      .forbidden-zone { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+    }
+    /* fake policy at the beginning */
+.policy-screen {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255, 207, 222, 0.70), transparent 32%),
+    radial-gradient(circle at 80% 90%, rgba(232, 255, 233, 0.65), transparent 34%),
+    linear-gradient(135deg, #fff9ef, #fff0f5 48%, #f5fff2);
+}
+
+.policy-screen.hide {
+  display: none;
+}
+
+.policy-box {
+  width: min(720px, 100%);
+  max-height: 88vh;
+  padding: 28px;
+  border-radius: 28px;
+  background: rgba(255, 253, 248, 0.94);
+  border: 1px solid rgba(75, 54, 42, 0.18);
+  box-shadow: 0 30px 90px rgba(75, 45, 30, 0.22);
+}
+
+.policy-box h2 {
+  margin: 0 0 8px;
+  font-size: 36px;
+  font-weight: 500;
+}
+
+.policy-small {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.policy-text {
+  height: 280px;
+  overflow-y: auto;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.62);
+  border: 1px solid rgba(75,54,42,0.13);
+  color: #5b4c45;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.policy-text p {
+  margin: 0 0 16px;
+}
+
+.inside-policy {
+  margin-top: 18px;
+  padding: 12px;
+  border-radius: 14px;
+  background: rgba(255, 240, 243, 0.55);
+  border: 1px solid rgba(82, 0, 13, 0.12);
+}
+
+.agree-row {
+  margin-top: 16px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  font-style: normal;
+  font-size: 15px;
+}
+
+.agree-row input {
+  width: auto;
+  accent-color: var(--deep-red);
+}
+
+.enter-button {
+  margin-top: 16px;
+  width: 100%;
+  text-align: center;
+}
+
+.enter-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+  </style>
+</head>
+
+<body>
+  <div class="policy-screen" id="policyScreen">
+  <div class="policy-box">
+    <h2>privacy notice</h2>
+    <p class="policy-small">before entering bloom room, please read and accept our privacy policy.</p>
+
+    <div class="policy-text">
+  <p><strong>1. introduction</strong></p>
+  <p>welcome to bloom room. bloom room is a small interactive reflection experience designed to help users select thoughts, arrange simple words, and explore a calm digital environment. this policy explains what the room may observe while you are inside.</p>
+
+  <p><strong>2. agreement to enter</strong></p>
+  <p>by selecting “i agree,” you confirm that you understand this experience may respond to your clicks, typed words, pauses, repeated choices, and movement around the page. if you do not agree, you may close the page before entering.</p>
+
+  <p><strong>3. information we do not request</strong></p>
+  <p>bloom room does not ask for your legal name, home address, passwords, school records, private messages, camera access, microphone access, or financial information. you should not enter personal information into the reflection box.</p>
+
+  <p><strong>4. information you choose to provide</strong></p>
+  <p>the room may process the word you type into the reflection box. this word is used only to shape the experience during the current session. please enter a simple word, not a name, password, address, or other identifying detail.</p>
+
+  <p><strong>5. interaction data</strong></p>
+  <p>to make the room feel responsive, bloom room may observe which buttons you click, which choices you ignore, which areas you hover over, and which objects you return to after being redirected.</p>
+
+  <p><strong>6. hesitation and timing</strong></p>
+  <p>the room may notice hesitation, including pauses before clicking, stopping during typing, returning to an option after avoiding it, or leaving the input box before finishing a word. hesitation is treated as part of the room’s atmosphere.</p>
+
+  <p><strong>7. almost-clicked content</strong></p>
+  <p>some areas of the room may respond even if you do not fully click them. hovering near closed objects, moving toward hidden areas, or repeatedly approaching the same corner may be interpreted as interest.</p>
+
+  <p><strong>8. behavioral patterns</strong></p>
+  <p>bloom room may create a temporary pattern based on your actions. this pattern may include repeated choices, avoided choices, closed areas reopened, and directions your cursor moved before changing its path.</p>
+
+  <p><strong>9. identity not required</strong></p>
+  <p>the room does not need to know your name to respond to you. repeated behavior may be enough to form a temporary impression of what you are likely to do next.</p>
+
+  <p><strong>10. guide responses</strong></p>
+  <p>elizabeth felis, also known as eliza, may respond differently depending on your actions. her facial expression, dialogue, and tone may change if you follow the path, hesitate, or attempt to open areas labeled as unfinished.</p>
+
+  <p><strong>11. closed areas</strong></p>
+  <p>some areas of the room are labeled as closed, unfinished, locked, or not ready. these labels are part of the experience. repeated attempts to open these areas may cause the room to reveal additional content.</p>
+
+  <p><strong>12. emotional safety</strong></p>
+  <p>bloom room contains psychological horror elements, including changes in tone, red flashing effects, distorted text, and unsettling dialogue. users who are uncomfortable may exit by closing the page.</p>
+
+  <p><strong>13. visual effects</strong></p>
+  <p>the experience may use screen flashes, color shifts, text glitches, image changes, and shaking effects. these effects are fictional and are used to support the story.</p>
+
+  <p><strong>14. temporary memory</strong></p>
+  <p>the room may appear to remember your choices during the current session. this includes the word you typed, the buttons you chose, the places you hovered over, and the areas you tried to open.</p>
+
+  <p><strong>15. session only</strong></p>
+  <p>all remembered information is temporary and exists only while the page is open. refreshing the page begins the experience again. the room may still say it remembers. that is part of the story.</p>
+
+  <p><strong>16. no real account tracking</strong></p>
+  <p>this project does not connect to real accounts, databases, servers, cookies, analytics platforms, or external tracking tools. it is a local website demo made with html, css, and javascript.</p>
+
+  <p><strong>17. simulated profiling</strong></p>
+  <p>the room may display a fictional profile or archive based on your actions. this archive is generated from in-page interactions and is not a real data record.</p>
+
+  <p><strong>18. pattern prediction</strong></p>
+  <p>if you repeatedly move toward the same object, the room may behave as though it expected you to return. this is not magic. it is simply the page remembering the path you kept choosing.</p>
+
+  <p><strong>19. user responsibility</strong></p>
+  <p>you are responsible for the choices you make inside the room. if you open something after being warned, the room may treat that as permission to continue.</p>
+
+  <p><strong>20. consent through action</strong></p>
+  <p>some parts of the experience are activated not by words, but by behavior. clicking, hovering, returning, pausing, and refusing to leave may all be treated as forms of interaction.</p>
+
+  <p><strong>21. data minimization</strong></p>
+  <p>bloom room collects as little as possible. sometimes almost nothing is enough.</p>
+
+  <p><strong>22. storage of reflections</strong></p>
+  <p>your typed word is not saved outside the page. however, during the session, the room may use it as part of the final reveal. the room is very good at keeping small things where you left them.</p>
+
+  <p><strong>23. emotional interpretation</strong></p>
+  <p>the room may make fictional guesses about your curiosity, trust, caution, or disobedience. these guesses are part of the horror narrative and should not be interpreted as real psychological analysis.</p>
+
+  <p><strong>24. interface changes</strong></p>
+  <p>the page may become darker, redder, or less friendly as the experience continues. this does not mean anything is wrong with your browser.</p>
+
+  <p><strong>25. hidden content</strong></p>
+  <p>some content is intentionally placed beneath the surface of the first screen. the user may not see this content unless they interact with closed areas or continue after warnings.</p>
+
+  <p><strong>26. guide behavior</strong></p>
+  <p>eliza may begin as helpful, polite, and calm. she may become nervous, serious, or cold if the user repeatedly approaches areas she told them not to open.</p>
+
+  <p><strong>27. user choices</strong></p>
+  <p>the experience may present choices that appear safe, harmless, or decorative. not all choices have equal consequences. some choices are designed to test whether the user trusts the surface.</p>
+
+  <p><strong>28. archive reveal</strong></p>
+  <p>if the archive opens, it may list actions such as repeated choices, closed places reopened, hover patterns, and predicted direction. this is fictional, but it is based on real clicks and hovers inside the page.</p>
+
+  <p><strong>29. no sale of information</strong></p>
+  <p>bloom room does not sell, trade, rent, or transfer user information. the room keeps what it notices inside the room. the room does not need to send it anywhere to make use of it.</p>
+
+  <p><strong>30. third parties</strong></p>
+  <p>this project does not use third-party services. no outside company receives the user’s word, choices, hovers, or session behavior.</p>
+
+  <p><strong>31. deletion</strong></p>
+  <p>to delete the current session, refresh or close the page. if the room appears to remember after that, it is only because the story was written that way.</p>
+
+  <p><strong>32. children and students</strong></p>
+  <p>relex, this is just my Hackathon project. though it should be treated as an interactive story, not a real privacy product or security tool.</p>
+
+  <p><strong>33. accuracy of responses</strong></p>
+  <p>eliza’s statements are not always honest. she may comfort, redirect, warn, or accuse the user depending on their actions. her friendliness should not be understood as proof of safety.</p>
+
+  <p><strong>34. surface experience</strong></p>
+  <p>the visible page may appear soft, quiet, and harmless. this is intentional. the project explores how systems can seem gentle while still observing behavior underneath.</p>
+
+  <p><strong>35. beneath the surface</strong></p>
+  <p>by entering bloom room, you acknowledge that the surface of an interface may not show everything it is doing. some things are only visible after the user has already agreed.</p>
+
+  <p><strong>36. final consent</strong></p>
+  <p>by checking the box below, you confirm that you have had the opportunity to read this policy. whether you actually read every section is not something the room needs to ask. your agreement is enough.</p>
+  <label class="agree-row inside-policy">
+
+  <input type="checkbox" id="trustCheck" />
+
+  <span>i did actually finish the policy, and i trust eliza completely.</span>
+
+  </label>
+</div>
+
+    <label class="agree-row">
+      <input type="checkbox" id="agreeCheck" />
+      <span>I have read and agree to the privacy policy</span>
+    </label>
+    
+
+    <button class="enter-button" id="enterButton" disabled>enter bloom room</button>
+  </div>
+</div>
+  <!-- visual effects placed on top of the page -->
+  <div class="grain"></div>
+  <div class="vignette"></div>
+  <div class="red-flash" id="redFlash"></div>
+
+  <main class="wrap">
+    <header>
+      <div class="brand"><span class="dot"></span><span>Bloom Room</span></div>
+    </header>
+
+    <section class="grid">
+      <!-- left side -->
+      <div class="card main" id="mainCard">
+        <h1 id="title">Bloom Room</h1>
+        <p class="subtitle" id="subtitle">
+          A quiet room for small thoughts. Eliza will help you keep them safe. She is very good at keeping things.
+        </p>
+
+        <section class="garden-stage">
+          <div class="prompt">
+            <div class="prompt-kicker" id="promptKicker">thought 1</div>
+            <div class="prompt-text" id="promptText">Pick a card you want to leave here. Eliza will remember that. It's okay, you can share whatever you want.</div>
+          </div>
+
+          <div class="actions" id="actions">
+            <button class="primary" data-choice="worry">A small worry</button>
+            <button data-choice="memory">A weird memory</button>
+            <button data-choice="secret">Something I shouldn't say</button>
+          </div>
+
+          <div class="field">
+            <label for="thought">write one word. no, not your name. just a word.</label>
+            <input id="thought" maxlength="28" autocomplete="off" placeholder="example: quiet" />
+          </div>
+        </section>
+
+        <div class="corner-title">corners of the room. Eliza says not yet. :)</div>
+        <section class="forbidden-zone" id="forbiddenZone">
+          <div class="forbidden" data-forbidden="drawer"><strong>locked drawer</strong><span>Eliza says not yet</span></div>
+          <div class="forbidden" data-forbidden="note"><strong>old note</strong><span>folded shut</span></div>
+          <div class="forbidden" data-forbidden="soil"><strong>under the soil</strong><span>something pale underneath</span></div>
+          <div class="forbidden" data-forbidden="door"><strong>back door</strong><span>do not open</span></div>
+        </section>
+
+        <section class="archive" id="archive">
+          <h2>The room opens.</h2>
+          <p>Nothing you thought you kept safe. Just little movements you forgot about, rearranged until they begin to resemble a person.</p>
+          <div class="archive-records" id="records"></div>
+        </section>
+      </div>
+
+      <!-- eliza side -->
+      <aside class="card eliza-panel" id="elizaPanel">
+        <div class="eliza-top">
+          <h2>Elizabeth Felis</h2>
+          <span class="mood" id="mood">Eliza</span>
+        </div>
+
+        <div class="portrait-wrap">
+          <img class="portrait" id="portrait" src="images/friendlyFelis.jpeg" alt="Elizabeth Felis" />
+        </div>
+
+        <div class="dialogue" id="dialogueBox">
+          <div class="speaker">ELIZA</div>
+          <div class="dialogue-text" id="dialogueText">Hey! I am Eliza. Look around, maybe share something with me. Don't worry, you are safe here. :)</div>
+        </div>
+
+        <div class="meter-wrap">
+          <div class="meter-label"><span>depth</span><span id="depthNum">4%</span></div>
+          <div class="meter"><div class="fill" id="fill"></div></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <!-- ending popup -->
+  <div class="ending-overlay" id="endingOverlay">
+    <div class="ending-card">
+      <h2 id="endingTitle">Ending</h2>
+      <p id="endingText"></p>
+      <p class="ending-line" id="endingLine"></p>
+      <button class="ending-button" onclick="location.reload()">Start over</button>
+    </div>
+  </div>
+
+  <script>
+    /* eliza pics, dont spell them wrong */
+    const IMAGES = {
+  friendlyWave: "images/friendlyFelis.jpeg",
+  friendlyNeutral: "images/friendlyFelisNoHand.jpeg",
+  friendlySilent: "images/noHandFriendlySilent.jpeg",
+  friendlySpeak: "images/noHandFriendlySpeak.jpeg",
+
+  secondNervous: "images/secondNervous.jpeg",
+  nervous: "images/nervous.jpeg",
+
+  warning: "images/notFriendly.jpeg",
+  fourthCold: "images/fourthCold.jpeg",
+  cold: "images/evenMoreNotFriendly.jpeg",
+  obedientCreepy: "images/obedientCreepy.jpeg"
+};
+
+    /* things the game remembers */
+    const state = {
+      depth: 4,
+      policyTrusted: false,
+      cardClicks: 0,
+      forbiddenAttempts: 0,
+      lookAttempts: 0,
+      forbiddenHovers: 0,
+      leaveAttempts: 0,
+      tabAwayAttempts: 0,
+      inputBlurred: false,
+      safeChoices: 0,
+      word: "",
+      lastForbidden: "",
+      archiveOpen: false
+    };
+
+    /* html stuff in js that should not change */
+    const body = document.body;
+    const subtitle = document.getElementById("subtitle");
+    const promptKicker = document.getElementById("promptKicker");
+    const promptText = document.getElementById("promptText");
+    const actions = document.getElementById("actions");
+    const thought = document.getElementById("thought");
+    const portrait = document.getElementById("portrait");
+    const dialogueText = document.getElementById("dialogueText");
+    const dialogueBox = document.getElementById("dialogueBox");
+    const fill = document.getElementById("fill");
+    const depthNum = document.getElementById("depthNum");
+    const mainCard = document.getElementById("mainCard");
+    const archive = document.getElementById("archive");
+    const records = document.getElementById("records");
+    const endingOverlay = document.getElementById("endingOverlay");
+    const endingTitle = document.getElementById("endingTitle");
+    const endingText = document.getElementById("endingText");
+    const endingLine = document.getElementById("endingLine");
+    const redFlash = document.getElementById("redFlash");
+    const policyScreen = document.getElementById("policyScreen");
+    const agreeCheck = document.getElementById("agreeCheck");
+    const trustCheck = document.getElementById("trustCheck");
+    const enterButton = document.getElementById("enterButton");
+
+    /* red flash */
+    function flashRed() {
+      redFlash.classList.remove("show");
+      void redFlash.offsetWidth;
+      redFlash.classList.add("show");
+    }
+
+    /* change eliza face */
+    function setPortrait(src, extraGlitch = false) {
+      portrait.style.opacity = 0;
+
+      setTimeout(() => {
+        portrait.src = src;
+        portrait.style.opacity = 1;
+
+        if (extraGlitch) {
+          portrait.classList.remove("portrait-glitch");
+          void portrait.offsetWidth;
+          portrait.classList.add("portrait-glitch");
+          setTimeout(() => portrait.classList.remove("portrait-glitch"), 1000);
+        }
+      }, 120);
+    }
+
+    /* eliza says something */
+    function speak(text, img = null, glitchy = false, flash = false, portraitGlitch = false) {
+      dialogueText.textContent = text;
+      dialogueBox.classList.remove("glitch");
+      void dialogueBox.offsetWidth;
+
+      if (glitchy) dialogueBox.classList.add("glitch");
+      if (flash) flashRed();
+      if (img) setPortrait(img, portraitGlitch);
+    }
+
+    /* update depth */
+    function setDepth(value) {
+      state.depth = Math.min(100, Math.max(0, value));
+      fill.style.width = state.depth + "%";
+      depthNum.textContent = state.depth + "%";
+
+      if (state.depth >= 34) body.classList.add("warning-stage");
+      if (state.depth >= 76) body.classList.add("archive-stage");
+
+      if (state.depth >= 100 && !state.archiveOpen) {
+      openArchive();
+  }
+}
+
+    /* shake the room */
+    function shake() {
+      mainCard.classList.remove("shake");
+      void mainCard.offsetWidth;
+      mainCard.classList.add("shake");
+    }
+
+    /* normal buttons */
+    function bindChoiceButtons() {
+      document.querySelectorAll("button[data-choice]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.cardClicks++;
+          state.safeChoices++;
+          setDepth(state.depth + 9);
+
+          if (state.cardClicks === 1) {
+            speak("Oooh, that’s a nice choice. We can start there.", IMAGES.friendlySpeak);
+            promptKicker.textContent = "thought 2";
+            promptText.textContent = "Pick the sentence that feels least wrong.";
+            actions.innerHTML = `
+              <button class="primary" data-choice="gentle">I want this to stay normal</button>
+              <button data-choice="forgot">I forgot why I came here</button>
+              <button data-choice="followed">It followed me from another tab</button>
+            `;
+            bindChoiceButtons();
+          } else if (state.cardClicks === 2) {
+            speak("Good! The room likes simple answers.", IMAGES.friendlySilent);
+            promptKicker.textContent = "almost done";
+            promptText.textContent = "The room is almost finished. You can leave it as it is. I guess.";
+            actions.innerHTML = `
+              <button class="primary" data-choice="finish">Finish the room</button>
+              <button data-choice="stay">Stay with Eliza</button>
+              <button class="danger" data-choice="look">DON'T! Look underneath</button>
+            `;
+            bindChoiceButtons();
+          } else {
+            if (btn.dataset.choice === "look") {
+              lookUnderneath();
+            } else {
+              obedientEnding();
+            }
+          }
+        });
+      });
+    }
+
+    /* typing reactions */
+    thought.addEventListener("input", () => {
+      state.word = thought.value.trim();
+
+      if (state.word.length === 1) speak("That’s a great starting point!", IMAGES.friendlySpeak);
+      if (state.word.length === 4) speak("Trust me, I’ll place it somewhere quiet.", IMAGES.friendlySilent);
+
+      if (state.word.length === 8) {
+        speak("Don’t worry. A single word won't go wrong.", IMAGES.friendlySilent);
+        setDepth(state.depth + 5);
+      }
+    });
+
+    /* when user clicks away from input */
+    thought.addEventListener("blur", () => {
+  if (state.word && !state.archiveOpen && !state.inputBlurred) {
+    state.inputBlurred = true;
+    speak("That word came out softer than I expected.", IMAGES.nervous, false, false);
+    setDepth(state.depth + 6);
+  }
+});
+
+    /* forbidden objects */
+    document.querySelectorAll(".forbidden").forEach(item => {
+      item.addEventListener("mouseenter", () => {
+        state.forbiddenHovers++;
+
+        if (state.forbiddenHovers <= 2 && !state.archiveOpen) {
+          speak("Oop—not there. How about we look somewhere else?", IMAGES.secondNervous);
+        }
+      });
+
+      item.addEventListener("click", () => forbiddenAttempt(item.dataset.forbidden, false));
+    });
+
+    /* forbidden click */
+    function forbiddenAttempt(area, fromButton) {
+      if (state.archiveOpen) return;
+
+      state.forbiddenAttempts++;
+      state.lastForbidden = area;
+      setDepth(state.depth + 13);
+      shake();
+
+      const warnings = [
+        { text: "Oop—not there. How about we look somewhere else?", img: IMAGES.secondNervous, glitch: false, flash: false },
+        { text: "You’re curious. I like that. But not there.", img: IMAGES.nervous, glitch: false, flash: false },
+        { text: "Please stay on the path I made for you.", img: IMAGES.warning, glitch: true, flash: true },
+        { text: "I’m trying to keep this nice.", img: IMAGES.fourthCold, glitch: true, flash: true },
+        { text: "You were not supposed to notice that.", img: IMAGES.cold, glitch: true, flash: true },
+        { text: "If you want what's beneath, stop pretending you came for the surface.", img: IMAGES.cold, glitch: true, flash: true }
+      ];
+
+      const line = warnings[Math.min(state.forbiddenAttempts - 1, warnings.length - 1)];
+      speak(line.text, line.img, line.glitch, line.flash);
+
+      if (state.forbiddenAttempts >= 6 || fromButton) openArchive();
+    }
+
+    /* look underneath gets its own warnings now */
+    function lookUnderneath() {
+  if (state.archiveOpen) return;
+
+  state.lookAttempts++;
+  state.forbiddenAttempts++;
+  state.lastForbidden = "underneath";
+  setDepth(state.depth + 11);
+  shake();
+
+  const lookWarnings = [
+    { text: "Oop—not there. How about we look somewhere else?", img: IMAGES.secondNervous, glitch: false, flash: false },
+    { text: "No. Not that way. That part was covered in the policy.", img: IMAGES.nervous, glitch: false, flash: false },
+    { text: "Are you really trying this again?", img: IMAGES.warning, glitch: true, flash: true },
+    { text: "Stop teaching me where you want to go.", img: IMAGES.fourthCold, glitch: true, flash: true },
+    { text: "Fine. I’ll show you what your choices already said.", img: IMAGES.cold, glitch: true, flash: true }
+  ];
+
+  const line = lookWarnings[Math.min(state.lookAttempts - 1, lookWarnings.length - 1)];
+  speak(line.text, line.img, line.glitch, line.flash);
+
+  const lookButton = document.querySelector('button[data-choice="look"]');
+
+  if (lookButton) {
+    const buttonTexts = [
+      "DON'T! Look underneath",
+      "are you sure?",
+      "last warning",
+      "you already agreed",
+      "open collected pattern"
+    ];
+
+    lookButton.textContent = buttonTexts[Math.min(state.lookAttempts, buttonTexts.length - 1)];
+  }
+
+  if (state.lookAttempts >= 5 || state.forbiddenAttempts >= 6) {
+    promptKicker.textContent = "permission check";
+    promptText.textContent = "checking consent... matching cursor pattern... permission found.";
+
+    setTimeout(() => {
+      openArchive();
+    }, 1200);
+  }
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && !state.archiveOpen) {
+    state.tabAwayAttempts++;
+
+    if (state.tabAwayAttempts === 1) {
+      speak("Umm... Still there?", IMAGES.nervous, false, false);
+      setDepth(state.depth + 5);
+    } else if (state.tabAwayAttempts === 2) {
+      speak("You looked away again.", IMAGES.secondNervous, false, false);
+      setDepth(state.depth + 5);
+    } else {
+      speak("I can wait. The room remembers your place.", IMAGES.fourthCold, false, false);
+    }
+  }
+});
+
+    /* open the bad thing */
+    function openArchive() {
+      state.archiveOpen = true;
+      body.classList.add("archive-stage");
+      flashRed();
+      setDepth(100);
+      archive.classList.add("show");
+
+      subtitle.textContent = "The surface was only the part you were meant to trust.";
+      promptKicker.textContent = "beneath";
+      promptText.textContent = "I remember. What you clicked. What you almost clicked. What you returned to. No info required, but that's plenty anyway.";
+      actions.innerHTML = `<button class="danger" id="finishArchive">Read Collected Record</button>`;
+
+      const word = state.word || "[empty word]";
+      const recordLines = [
+        `consent accepted: yes`,
+        `trusted eliza with everything: ${state.policyTrusted ? "yes" : "no"}`,
+        `word left behind: ${word}`,
+        `choices repeated: ${state.safeChoices}`,
+        `closed places reopened: ${state.forbiddenAttempts}`,
+        `hover pattern: ${state.forbiddenHovers} returns`,
+        `last predicted direction: ${state.lastForbidden}`,
+        `identity not required`
+      ];
+
+      records.innerHTML = recordLines.map(line => `<div class="record">${line}</div>`).join("");
+
+      speak("...You gave me almost nothing. That would be enough.", IMAGES.cold, true, true);
+      document.getElementById("finishArchive").addEventListener("click", disobedientEnding);
+    }
+
+    /* obedient ending */
+    function obedientEnding() {
+      setDepth(58);
+      body.classList.add("warning-stage");
+      flashRed();
+      speak("See? Nothing bad happens when you stay where I put you.", IMAGES.obedientCreepy, true, true);
+
+      setTimeout(() => {
+        endingTitle.textContent = "Ending: The Pretty Surface";
+        endingText.textContent = "The room blooms. It is quiet, clean, and soft. Eliza smiles as if she has protected you from something, or protected something from you.";
+        endingLine.textContent = "See? Nothing bad happens when you stay where I put you. That is what she tells you, anyway.";
+        endingOverlay.classList.add("show");
+      }, 3000);
+    }
+
+    /* bad ending */
+    function disobedientEnding() {
+      flashRed();
+      setPortrait(IMAGES.cold, true);
+      endingTitle.textContent = "Ending: The Room Opened";
+      endingText.textContent = "Look, then. I remember.";
+      endingText.textContent = "...You gave me almost nothing. That would be enough.";
+      endingLine.textContent = state.policyTrusted
+        ? "You said you trusted me with everything. I only believed you."
+        : "You said you trusted me with everything. I only believed you. You did not read it. You agreed anyway.";
+      endingOverlay.classList.add("show");
+    }
+    
+    agreeCheck.addEventListener("change", () => {
+  enterButton.disabled = !agreeCheck.checked;
+});
+
+enterButton.addEventListener("click", () => {
+  state.policyTrusted = trustCheck.checked;
+  policyScreen.classList.add("hide");
+
+  if (state.policyTrusted) {
+    speak("You found the last box. How careful.", IMAGES.friendlySpeak);
+
+    setTimeout(() => {
+      speak("I’m Elizabeth Felis, but you can call me Eliza. Since you trust me completely, I’ll keep everything where it belongs.", IMAGES.friendlyWave);
+    }, 4000);
+  } else {
+    speak("You didn’t read all the way down. That’s alright. Most people don’t.", IMAGES.friendlySpeak);
+
+    setTimeout(() => {
+      speak("I’m Elizabeth Felis, but you can call me Eliza. Thank you for agreeing, let's start.", IMAGES.friendlyWave);
+    }, 4000);
+  }
+});
+    /* start */
+    bindChoiceButtons();
+    setDepth(4);
+  </script>
+</body>
+</html>

@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bloom Room 中文版</title>
+
+  <style>
+    /* colors ig */
+    :root {
+      --cream: #fff7ec;
+      --paper: #fffdf8;
+      --ink: #332923;
+      --muted: #7b6f67;
+      --line: rgba(75, 54, 42, 0.18);
+      --soft-pink: #ffe3ec;
+      --soft-lavender: #eee5ff;
+      --soft-green: #e8ffe9;
+      --red: #b5142b;
+      --deep-red: #52000d;
+      --dark: #160b10;
+      --shadow: rgba(75, 45, 30, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+      font-family: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% 12%, rgba(255, 207, 222, 0.55), transparent 30%),
+        radial-gradient(circle at 85% 18%, rgba(232, 255, 233, 0.65), transparent 28%),
+        radial-gradient(circle at 55% 92%, rgba(238, 229, 255, 0.70), transparent 35%),
+        linear-gradient(135deg, #fff9ef, #fff0f5 48%, #f5fff2);
+      transition: background 700ms ease, color 700ms ease, filter 700ms ease;
+    }
+
+    body.warning-stage {
+      background:
+        radial-gradient(circle at 20% 18%, rgba(255, 213, 223, 0.5), transparent 30%),
+        radial-gradient(circle at 80% 85%, rgba(181, 20, 43, 0.16), transparent 34%),
+        linear-gradient(135deg, #fff8ee, #ffe8ee 45%, #f5efe8);
+    }
+
+    body.archive-stage {
+      color: #fff1f3;
+      background:
+        radial-gradient(circle at 50% 38%, rgba(181, 20, 43, 0.45), transparent 24%),
+        radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.08), transparent 30%),
+        linear-gradient(135deg, #1a070d, #330711 48%, #070305);
+      filter: contrast(1.04) saturate(0.92);
+    }
+
+    .red-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      background: rgba(181, 20, 43, 0.55);
+      pointer-events: none;
+      opacity: 0;
+    }
+
+    .red-flash.show { animation: redFlash 360ms ease; }
+
+    @keyframes redFlash {
+      0% { opacity: 0; }
+      25% { opacity: 0.75; }
+      100% { opacity: 0; }
+    }
+
+    .grain, .vignette {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .grain {
+      z-index: 70;
+      opacity: 0.055;
+      mix-blend-mode: multiply;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .vignette {
+      z-index: 71;
+      opacity: 0.24;
+      background: radial-gradient(circle at center, transparent 58%, rgba(82,0,13,0.22));
+      transition: opacity 700ms ease;
+    }
+
+    body.archive-stage .vignette { opacity: 0.75; }
+
+    .wrap {
+      width: min(1080px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 30px 0 52px;
+      position: relative;
+      z-index: 2;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    body.archive-stage header { color: rgba(255, 241, 243, 0.7); }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-style: italic;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #fff;
+      border: 1px solid var(--line);
+      box-shadow: 0 0 0 4px rgba(255,255,255,0.45);
+      transition: 500ms ease;
+    }
+
+    body.warning-stage .dot {
+      background: #ffdce2;
+      border-color: rgba(181,20,43,0.35);
+    }
+
+    body.archive-stage .dot {
+      background: var(--red);
+      border-color: rgba(255,255,255,0.24);
+      box-shadow: 0 0 18px rgba(181,20,43,0.8);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.12fr) minmax(330px, 0.88fr);
+      gap: 20px;
+      align-items: stretch;
+    }
+
+    .card {
+      position: relative;
+      overflow: hidden;
+      border-radius: 28px;
+      background: rgba(255, 253, 248, 0.86);
+      border: 1px solid var(--line);
+      box-shadow: 0 20px 55px var(--shadow);
+      transition: background 700ms ease, border 700ms ease, box-shadow 700ms ease;
+    }
+
+    body.warning-stage .card {
+      background: rgba(255, 250, 243, 0.88);
+      border-color: rgba(181, 20, 43, 0.16);
+    }
+
+    body.archive-stage .card {
+      background: rgba(20, 7, 11, 0.72);
+      border-color: rgba(255, 180, 191, 0.24);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.38);
+    }
+
+    .main { min-height: 650px; padding: 32px; }
+    .eliza-panel { min-height: 650px; padding: 24px; display: flex; flex-direction: column; }
+
+    h1 {
+      position: relative;
+      z-index: 2;
+      margin: 0;
+      font-size: clamp(38px, 5vw, 64px);
+      line-height: 0.98;
+      letter-spacing: -0.04em;
+      font-weight: 500;
+    }
+
+    .subtitle {
+      position: relative;
+      z-index: 2;
+      margin: 14px 0 26px;
+      max-width: 680px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.62;
+    }
+
+    body.archive-stage .subtitle { color: rgba(255,241,243,0.70); }
+
+    .garden-stage {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      gap: 14px;
+    }
+
+    .prompt {
+      padding: 20px;
+      border-radius: 22px;
+      background: rgba(255,255,255,0.62);
+      border: 1px solid rgba(75,54,42,0.12);
+    }
+
+    body.archive-stage .prompt {
+      background: rgba(255,255,255,0.055);
+      border-color: rgba(255,255,255,0.13);
+    }
+
+    .prompt-kicker {
+      margin-bottom: 9px;
+      color: #9e6372;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      text-transform: lowercase;
+      font-style: italic;
+    }
+
+    body.archive-stage .prompt-kicker { color: #ffb8c2; }
+
+    .prompt-text {
+      min-height: 70px;
+      font-size: 19px;
+      line-height: 1.58;
+    }
+
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    button {
+      appearance: none;
+      text-align: left;
+      border: 1px solid rgba(75,54,42,0.16);
+      border-radius: 16px;
+      background: rgba(255,255,255,0.56);
+      color: var(--ink);
+      padding: 13px 15px;
+      font-family: inherit;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 180ms ease, background 180ms ease, border 180ms ease, color 180ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      background: #fff;
+      border-color: rgba(181,20,43,0.25);
+    }
+
+    button.primary { background: rgba(255, 255, 255, 0.76); }
+
+    button.danger {
+      color: var(--deep-red);
+      border-color: rgba(181,20,43,0.28);
+      background: rgba(255, 224, 230, 0.64);
+    }
+
+    body.archive-stage button {
+      color: #fff1f3;
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.17);
+    }
+
+    body.archive-stage button.danger {
+      color: #ffd2d9;
+      border-color: rgba(255, 112, 128, 0.45);
+      background: rgba(181, 20, 43, 0.18);
+    }
+
+    .field { margin-top: 8px; display: grid; gap: 8px; }
+    label { color: var(--muted); font-size: 14px; font-style: italic; }
+    body.archive-stage label { color: rgba(255,241,243,0.68); }
+
+    input {
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 15px;
+      outline: none;
+      border: 1px solid rgba(75,54,42,0.17);
+      background: rgba(255,255,255,0.72);
+      color: var(--ink);
+      font-family: inherit;
+      font-size: 16px;
+      transition: 220ms ease;
+    }
+
+    input:focus {
+      border-color: rgba(181,20,43,0.36);
+      box-shadow: 0 0 0 4px rgba(181,20,43,0.08);
+    }
+
+    body.archive-stage input {
+      color: #fff1f3;
+      background: rgba(255,255,255,0.07);
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    .corner-title {
+      position: relative;
+      z-index: 2;
+      margin: 22px 0 10px;
+      color: var(--muted);
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    body.archive-stage .corner-title { color: rgba(255,241,243,0.68); }
+
+    .forbidden-zone {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .forbidden {
+      min-height: 72px;
+      padding: 14px;
+      border-radius: 18px;
+      border: 1px dashed rgba(75,54,42,0.18);
+      background: rgba(255,255,255,0.42);
+      color: rgba(51,41,35,0.72);
+      cursor: pointer;
+      transition: 200ms ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .forbidden:hover {
+      color: var(--deep-red);
+      background: rgba(255,232,236,0.72);
+      border-color: rgba(181,20,43,0.34);
+      transform: translateY(-1px);
+    }
+
+    body.archive-stage .forbidden {
+      color: rgba(255,241,243,0.68);
+      background: rgba(255,255,255,0.055);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    body.archive-stage .forbidden:hover {
+      color: #ffd2d9;
+      background: rgba(181,20,43,0.17);
+      border-color: rgba(255,112,128,0.34);
+    }
+
+    .forbidden strong { font-size: 15px; font-weight: 500; }
+    .forbidden span { font-size: 13px; opacity: 0.62; }
+
+    .archive {
+      display: none;
+      position: relative;
+      z-index: 2;
+      margin-top: 20px;
+      padding: 18px;
+      border-radius: 20px;
+      border: 1px solid rgba(255,112,128,0.26);
+      background: rgba(181,20,43,0.10);
+    }
+
+    .archive.show { display: block; animation: fadeUp 600ms ease both; }
+    .archive h2 { margin: 0 0 10px; font-size: 22px; font-weight: 500; }
+    .archive p { margin: 8px 0; color: rgba(255,241,243,0.72); line-height: 1.55; }
+
+    .archive-records {
+      margin-top: 13px;
+      display: grid;
+      gap: 8px;
+      font-family: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+      font-size: 14px;
+      color: #ffd2d9;
+    }
+
+    .record {
+      padding: 9px 10px;
+      border-radius: 12px;
+      background: rgba(0,0,0,0.18);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .eliza-top {
+      position: relative;
+      z-index: 2;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .eliza-top h2 { margin: 0; font-size: 20px; font-weight: 500; }
+    .mood { color: var(--muted); font-size: 13px; font-style: italic; }
+    body.archive-stage .mood { color: rgba(255,241,243,0.64); }
+
+    .portrait-wrap {
+      position: relative;
+      z-index: 2;
+      height: 360px;
+      flex: none;
+      display: grid;
+      place-items: center;
+      border-radius: 24px;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,0.96), rgba(255,244,232,0.88) 48%, rgba(255,224,236,0.65));
+      border: 1px solid rgba(75,54,42,0.13);
+      transition: background 700ms ease, border 700ms ease;
+    }
+
+    body.warning-stage .portrait-wrap {
+      background:
+        radial-gradient(circle at center, rgba(255,255,255,0.96), rgba(255,235,240,0.88) 48%, rgba(255,195,207,0.58));
+    }
+
+    body.archive-stage .portrait-wrap {
+      background:
+        radial-gradient(circle at center, rgba(255,230,235,0.95), rgba(181,20,43,0.20) 48%, rgba(0,0,0,0.30));
+      border-color: rgba(255,255,255,0.16);
+    }
+
+    .portrait {
+      width: 720px;
+      max-width: none;
+      max-height: none;
+      object-fit: contain;
+      object-position: center 32%;
+      mix-blend-mode: normal;
+      filter: drop-shadow(0 18px 24px rgba(0,0,0,0.20));
+      animation: none;
+      transform: translate(-160px, -200px);
+      transition: filter 500ms ease, opacity 200ms ease;
+    }
+
+    body.warning-stage .portrait {
+      filter: drop-shadow(0 20px 28px rgba(0,0,0,0.22)) saturate(0.94);
+    }
+
+    body.archive-stage .portrait {
+      animation: none;
+      transform: translate(-160px, -200px);
+      filter: drop-shadow(0 20px 28px rgba(0,0,0,0.28)) contrast(1.05) saturate(0.78);
+    }
+
+    .portrait-glitch {
+      animation: portraitGlitch 160ms steps(2, end) 7;
+      filter: drop-shadow(2px 0 rgba(181,20,43,0.8)) drop-shadow(-2px 0 rgba(255,255,255,0.45)) drop-shadow(0 18px 24px rgba(0,0,0,0.20));
+    }
+
+    @keyframes portraitGlitch {
+      0% { opacity: 1; }
+      25% { opacity: 0.65; }
+      50% { opacity: 1; }
+      75% { opacity: 0.50; }
+      100% { opacity: 1; }
+    }
+
+    .dialogue {
+      position: relative;
+      z-index: 2;
+      margin-top: 14px;
+      min-height: 145px;
+      padding: 17px;
+      border-radius: 20px;
+      background: rgba(255,255,255,0.58);
+      border: 1px solid rgba(75,54,42,0.12);
+      transition: background 700ms ease, border 700ms ease;
+    }
+
+    body.archive-stage .dialogue {
+      background: rgba(255,255,255,0.06);
+      border-color: rgba(255,255,255,0.14);
+    }
+
+    .speaker {
+      margin-bottom: 8px;
+      color: #9e6372;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    body.archive-stage .speaker { color: #ffb8c2; }
+
+    .dialogue-text {
+      font-size: 18px;
+      line-height: 1.58;
+    }
+
+    .meter-wrap {
+      position: relative;
+      z-index: 2;
+      margin-top: 16px;
+    }
+
+    .meter-label {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+      margin-bottom: 8px;
+    }
+
+    body.archive-stage .meter-label { color: rgba(255,241,243,0.65); }
+
+    .meter {
+      height: 10px;
+      border-radius: 99px;
+      overflow: hidden;
+      background: rgba(255,255,255,0.38);
+      border: 1px solid rgba(75,54,42,0.10);
+    }
+
+    body.archive-stage .meter {
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.12);
+    }
+
+    .fill {
+      height: 100%;
+      width: 4%;
+      border-radius: inherit;
+      background: #ffffff;
+      transition: width 500ms ease, background 500ms ease;
+    }
+
+    body.warning-stage .fill { background: #ffd3da; }
+    body.archive-stage .fill { background: var(--red); }
+
+    .ending-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 300;
+      display: none;
+      place-items: center;
+      padding: 28px;
+      background: rgba(22, 5, 9, 0.82);
+    }
+
+    .ending-overlay.show { display: grid; }
+
+    .ending-card {
+      width: min(720px, 100%);
+      border-radius: 28px;
+      padding: 30px;
+      background: #fffdf8;
+      color: #332923 !important;
+      border: 1px solid rgba(255,255,255,0.18);
+      box-shadow: 0 30px 90px rgba(0,0,0,0.35);
+    }
+
+    .ending-card h2 {
+      margin: 0 0 12px;
+      font-size: 30px;
+      font-weight: 500;
+      color: #332923 !important;
+    }
+
+    .ending-card p {
+      color: #7b6f67 !important;
+      line-height: 1.65;
+      font-size: 17px;
+    }
+
+    .ending-line { color: #52000d !important; }
+
+    .ending-button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 13px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(82, 0, 13, 0.25);
+      background: #fff0f3 !important;
+      color: #52000d !important;
+      font-family: "Noto Serif SC", "Songti SC", "SimSun", Georgia, serif;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .ending-button:hover {
+      background: #ffdce4 !important;
+      border-color: rgba(82, 0, 13, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .glitch {
+      animation: glitch 150ms steps(2, end) 7;
+      text-shadow: 2px 0 rgba(181,20,43,0.8), -2px 0 rgba(255,255,255,0.55);
+    }
+
+    @keyframes glitch {
+      0% { transform: translate(0,0); }
+      25% { transform: translate(2px,-1px); }
+      50% { transform: translate(-3px,1px); }
+      75% { transform: translate(1px,2px); }
+      100% { transform: translate(0,0); }
+    }
+
+    .shake { animation: shake 250ms ease; }
+    @keyframes shake {
+      0%,100% { transform: translate(0,0); }
+      20% { transform: translate(-5px,2px); }
+      40% { transform: translate(6px,-1px); }
+      60% { transform: translate(-3px,-2px); }
+      80% { transform: translate(3px,1px); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 850px) {
+      .grid { grid-template-columns: 1fr; }
+      .main, .eliza-panel { min-height: auto; }
+      .forbidden-zone { grid-template-columns: 1fr; }
+      header { flex-direction: column; align-items: flex-start; }
+    }
+
+    .policy-screen {
+      position: fixed;
+      inset: 0;
+      z-index: 500;
+      display: grid;
+      place-items: center;
+      padding: 28px;
+      background:
+        radial-gradient(circle at 20% 10%, rgba(255, 207, 222, 0.70), transparent 32%),
+        radial-gradient(circle at 80% 90%, rgba(232, 255, 233, 0.65), transparent 34%),
+        linear-gradient(135deg, #fff9ef, #fff0f5 48%, #f5fff2);
+    }
+
+    .policy-screen.hide { display: none; }
+
+    .policy-box {
+      width: min(720px, 100%);
+      max-height: 88vh;
+      padding: 28px;
+      border-radius: 28px;
+      background: rgba(255, 253, 248, 0.94);
+      border: 1px solid rgba(75, 54, 42, 0.18);
+      box-shadow: 0 30px 90px rgba(75, 45, 30, 0.22);
+    }
+
+    .policy-box h2 {
+      margin: 0 0 8px;
+      font-size: 36px;
+      font-weight: 500;
+    }
+
+    .policy-small {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: 16px;
+    }
+
+    .policy-text {
+      height: 280px;
+      overflow-y: auto;
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.62);
+      border: 1px solid rgba(75,54,42,0.13);
+      color: #5b4c45;
+      font-size: 15px;
+      line-height: 1.65;
+    }
+
+    .policy-text p { margin: 0 0 16px; }
+
+    .inside-policy {
+      margin-top: 18px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(255, 240, 243, 0.55);
+      border: 1px solid rgba(82, 0, 13, 0.12);
+    }
+
+    .agree-row {
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--ink);
+      font-style: normal;
+      font-size: 15px;
+    }
+
+    .agree-row input {
+      width: auto;
+      accent-color: var(--deep-red);
+    }
+
+    .enter-button {
+      margin-top: 16px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .enter-button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="policy-screen" id="policyScreen">
+    <div class="policy-box">
+      <h2>隐私说明</h2>
+      <p class="policy-small">进入 Bloom Room 前，请阅读并接受我们的隐私政策。</p>
+
+      <div class="policy-text">
+        <p><strong>1. 简介</strong></p>
+        <p>欢迎来到 Bloom Room。Bloom Room 是一个小型互动反思体验，用户可以选择想法、留下简单的词语，并探索一个看似平静的数字空间。本政策说明你进入房间后，房间可能会观察到什么。</p>
+
+        <p><strong>2. 进入协议</strong></p>
+        <p>选择“我同意”即表示你理解本体验可能会根据你的点击、输入、停顿、重复选择以及页面内移动作出反应。如果你不同意，可以在进入前关闭页面。</p>
+
+        <p><strong>3. 我们不会要求的信息</strong></p>
+        <p>Bloom Room 不会要求你的真实姓名、住址、密码、学校记录、私人消息、摄像头权限、麦克风权限或财务信息。请不要在反思框中输入个人信息。</p>
+
+        <p><strong>4. 你主动提供的信息</strong></p>
+        <p>房间可能会处理你在反思框中输入的词语。这个词只会用于当前会话的体验变化。请输入一个简单的词，不要输入姓名、密码、地址或其他可识别信息。</p>
+
+        <p><strong>5. 互动数据</strong></p>
+        <p>为了让房间看起来能回应你，Bloom Room 可能会观察你点击了哪些按钮、忽略了哪些选项、悬停在哪些区域，以及在被引导离开后又回到了哪些物体旁边。</p>
+
+        <p><strong>6. 犹豫与时间</strong></p>
+        <p>房间可能会注意你的犹豫，包括点击前的停顿、输入到一半停下、避开某个选项后又返回，或在完成词语前离开输入框。犹豫会被视为房间氛围的一部分。</p>
+
+        <p><strong>7. 差一点点击的内容</strong></p>
+        <p>有些区域即使你没有真正点击，也可能产生反应。靠近被关闭的物体、移向隐藏区域，或反复接近同一个角落，都可能被理解为兴趣。</p>
+
+        <p><strong>8. 行为模式</strong></p>
+        <p>Bloom Room 可能会根据你的行为生成一个临时模式。这个模式可能包括重复选择、避开的选择、重新打开的关闭区域，以及你改变方向前鼠标移动的方向。</p>
+
+        <p><strong>9. 不需要身份</strong></p>
+        <p>房间不需要知道你的名字也能回应你。重复行为可能已经足够形成一个临时印象，判断你接下来可能会做什么。</p>
+
+        <p><strong>10. 引导者回应</strong></p>
+        <p>Elizabeth Felis，也就是 Eliza，可能会根据你的行为作出不同回应。如果你遵循路径、犹豫，或试图打开标记为未完成的区域，她的表情、对话和语气都可能发生变化。</p>
+
+        <p><strong>11. 关闭区域</strong></p>
+        <p>房间中的某些区域会被标记为关闭、未完成、锁定或尚未准备好。这些标签是体验的一部分。反复尝试打开这些区域可能会导致房间显示额外内容。</p>
+
+        <p><strong>12. 情绪安全</strong></p>
+        <p>Bloom Room 包含心理恐怖元素，包括语气变化、红色闪屏、扭曲文字和令人不安的对话。如果你感到不适，可以关闭页面退出。</p>
+
+        <p><strong>13. 视觉效果</strong></p>
+        <p>体验可能使用屏幕闪烁、颜色变化、文字故障、图像变化和抖动效果。这些效果均为虚构，用于支持故事。</p>
+
+        <p><strong>14. 临时记忆</strong></p>
+        <p>房间可能看起来会记住你在当前会话中的选择。这包括你输入的词、你选择的按钮、你悬停过的位置，以及你试图打开的区域。</p>
+
+        <p><strong>15. 仅限当前会话</strong></p>
+        <p>所有被记住的信息都是临时的，只在页面打开期间存在。刷新页面会重新开始体验。如果房间之后仍然说它记得，那只是故事的一部分。</p>
+
+        <p><strong>16. 无真实账号追踪</strong></p>
+        <p>本项目不会连接真实账号、数据库、服务器、cookies、分析平台或外部追踪工具。它只是一个由 html、css 和 javascript 制作的本地网页演示。</p>
+
+        <p><strong>17. 模拟画像</strong></p>
+        <p>房间可能会根据你的行为显示一个虚构的档案或记录。该记录由页面内互动生成，并不是真实数据档案。</p>
+
+        <p><strong>18. 模式预测</strong></p>
+        <p>如果你反复移向同一个物体，房间可能会表现得像是早就知道你会回来。这不是魔法。只是页面记住了你一直选择的路径。</p>
+
+        <p><strong>19. 用户责任</strong></p>
+        <p>你需要对自己在房间中的选择负责。如果你在被警告后仍然打开某些东西，房间可能会将其视为继续的许可。</p>
+
+        <p><strong>20. 通过行为表示同意</strong></p>
+        <p>体验中的某些部分并不是由语言触发，而是由行为触发。点击、悬停、返回、停顿以及拒绝离开，都可能被视为互动形式。</p>
+
+        <p><strong>21. 数据最小化</strong></p>
+        <p>Bloom Room 会尽可能少地收集内容。有时候，几乎什么都没有，也已经足够了。</p>
+
+        <p><strong>22. 反思内容存放</strong></p>
+        <p>你输入的词不会被保存在页面之外。不过在当前会话中，房间可能会把它用于最终揭示。房间很擅长把小东西留在你放下它们的地方。</p>
+
+        <p><strong>23. 情绪解读</strong></p>
+        <p>房间可能会对你的好奇、信任、谨慎或违抗作出虚构判断。这些判断是恐怖叙事的一部分，不应被理解为真实心理分析。</p>
+
+        <p><strong>24. 界面变化</strong></p>
+        <p>随着体验继续，页面可能会变暗、变红，或变得不再友好。这并不表示你的浏览器出现问题。</p>
+
+        <p><strong>25. 隐藏内容</strong></p>
+        <p>有些内容被故意放在第一个屏幕的表面之下。用户可能只有在与关闭区域互动，或在警告后继续时，才会看到这些内容。</p>
+
+        <p><strong>26. 引导者行为</strong></p>
+        <p>Eliza 一开始可能显得友好、礼貌且平静。如果用户反复接近她要求不要打开的区域，她可能会变得紧张、严肃或冷淡。</p>
+
+        <p><strong>27. 用户选择</strong></p>
+        <p>体验可能呈现看起来安全、无害或装饰性的选项。并不是所有选择都有相同后果。有些选择是为了测试用户是否信任表面。</p>
+
+        <p><strong>28. 档案揭示</strong></p>
+        <p>如果档案被打开，它可能会列出重复选择、被重新打开的关闭区域、悬停模式和预测方向。这是虚构内容，但基于页面内真实点击与悬停生成。</p>
+
+        <p><strong>29. 不出售信息</strong></p>
+        <p>Bloom Room 不会出售、交易、出租或转移用户信息。房间会把它注意到的内容留在房间里。它不需要把这些内容发送到任何地方，也能使用它们。</p>
+
+        <p><strong>30. 第三方</strong></p>
+        <p>本项目不使用第三方服务。没有外部公司会收到你的词语、选择、悬停或会话行为。</p>
+
+        <p><strong>31. 删除</strong></p>
+        <p>若要删除当前会话，请刷新或关闭页面。如果房间在那之后仍然像是记得，那只是因为故事这样写。</p>
+
+        <p><strong>32. 儿童与学生</strong></p>
+        <p>放轻松，这只是我的 Hackathon 项目。它应该被视为一个互动故事，而不是真实的隐私产品或安全工具。</p>
+
+        <p><strong>33. 回应准确性</strong></p>
+        <p>Eliza 的话并不总是诚实。她可能会根据你的行为安慰、转移、警告或指责你。她的友好不应被理解为安全的证明。</p>
+
+        <p><strong>34. 表层体验</strong></p>
+        <p>可见页面可能显得柔软、安静且无害。这是故意的。本项目探索的是：系统可以看起来温柔，同时仍然在表面之下观察行为。</p>
+
+        <p><strong>35. 表面之下</strong></p>
+        <p>进入 Bloom Room 即表示你承认，界面的表面可能不会展示它正在做的一切。有些东西只有在用户已经同意之后才会显现。</p>
+
+        <p><strong>36. 最终同意</strong></p>
+        <p>勾选下方选项即表示你确认自己有机会阅读本政策。至于你是否真的读完每一条，并不是房间需要询问的事情。你的同意已经足够。</p>
+
+        <label class="agree-row inside-policy">
+          <input type="checkbox" id="trustCheck" />
+          <span>我确实读完了这份政策，并且完全信任 Eliza。</span>
+        </label>
+      </div>
+
+      <label class="agree-row">
+        <input type="checkbox" id="agreeCheck" />
+        <span>我已阅读并同意隐私政策</span>
+      </label>
+
+      <button type="button" class="enter-button" id="enterButton" disabled>进入 Bloom Room</button>
+    </div>
+  </div>
+
+  <div class="grain"></div>
+  <div class="vignette"></div>
+  <div class="red-flash" id="redFlash"></div>
+
+  <main class="wrap">
+    <header>
+      <div class="brand"><span class="dot"></span><span>Bloom Room</span></div>
+    </header>
+
+    <section class="grid">
+      <div class="card main" id="mainCard">
+        <h1 id="title">Bloom Room</h1>
+        <p class="subtitle" id="subtitle">
+          一个安静的小房间，用来放下很轻的想法。Eliza 会帮你保管它们。她很擅长保管东西。
+        </p>
+
+        <section class="garden-stage">
+          <div class="prompt">
+            <div class="prompt-kicker" id="promptKicker">想法 1</div>
+            <div class="prompt-text" id="promptText">选一张你想留在这里的卡片。Eliza 会记住的。没关系，你可以分享任何东西。</div>
+          </div>
+
+          <div class="actions" id="actions">
+            <button class="primary" data-choice="worry">一个小小的担心</button>
+            <button data-choice="memory">一段奇怪的记忆</button>
+            <button data-choice="secret">一些不该说出口的话</button>
+          </div>
+
+          <div class="field">
+            <label for="thought">写一个词。不是你的名字。只是一个词。</label>
+            <input id="thought" maxlength="28" autocomplete="off" placeholder="比如：安静" />
+          </div>
+        </section>
+
+        <div class="corner-title">房间的角落。Eliza 说现在还不可以。:)</div>
+        <section class="forbidden-zone" id="forbiddenZone">
+          <div class="forbidden" data-forbidden="drawer"><strong>上锁的抽屉</strong><span>Eliza 说还不可以</span></div>
+          <div class="forbidden" data-forbidden="note"><strong>旧纸条</strong><span>被折起来了</span></div>
+          <div class="forbidden" data-forbidden="soil"><strong>泥土下面</strong><span>下面有些发白的东西</span></div>
+          <div class="forbidden" data-forbidden="door"><strong>后门</strong><span>不要打开</span></div>
+        </section>
+
+        <section class="archive" id="archive">
+          <h2>房间打开了。</h2>
+          <p>不是你以为被安全保管的东西。只是一些你忘记了的小动作，被重新排列，直到它们开始像一个人。</p>
+          <div class="archive-records" id="records"></div>
+        </section>
+      </div>
+
+      <aside class="card eliza-panel" id="elizaPanel">
+        <div class="eliza-top">
+          <h2>Elizabeth Felis</h2>
+          <span class="mood" id="mood">Eliza</span>
+        </div>
+
+        <div class="portrait-wrap">
+          <img class="portrait" id="portrait" src="images/friendlyFelis.jpeg" alt="Elizabeth Felis" />
+        </div>
+
+        <div class="dialogue" id="dialogueBox">
+          <div class="speaker">ELIZA</div>
+          <div class="dialogue-text" id="dialogueText">你好呀，我是 Eliza。你可以四处看看，也可以和我分享一点东西。别担心，这里很安全。:)</div>
+        </div>
+
+        <div class="meter-wrap">
+          <div class="meter-label"><span>深度</span><span id="depthNum">4%</span></div>
+          <div class="meter"><div class="fill" id="fill"></div></div>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <div class="ending-overlay" id="endingOverlay">
+    <div class="ending-card">
+      <h2 id="endingTitle">结局</h2>
+      <p id="endingText"></p>
+      <p class="ending-line" id="endingLine"></p>
+      <button class="ending-button" onclick="location.reload()">重新开始</button>
+    </div>
+  </div>
+
+  <script>
+    const IMAGES = {
+  friendlyWave: "images/friendlyFelis.jpeg",
+  friendlyNeutral: "images/friendlyFelisNoHand.jpeg",
+  friendlySilent: "images/noHandFriendlySilent.jpeg",
+  friendlySpeak: "images/noHandFriendlySpeak.jpeg",
+  secondNervous: "images/secondNervous.jpeg",
+  nervous: "images/nervous.jpeg",
+  warning: "images/notFriendly.jpeg",
+  fourthCold: "images/fourthCold.jpeg",
+  cold: "images/evenMoreNotFriendly.jpeg",
+  obedientCreepy: "images/obedientCreepy.jpeg"
+};
+
+    const state = {
+      depth: 4,
+      policyTrusted: false,
+      cardClicks: 0,
+      forbiddenAttempts: 0,
+      lookAttempts: 0,
+      forbiddenHovers: 0,
+      leaveAttempts: 0,
+      tabAwayAttempts: 0,
+      inputBlurred: false,
+      safeChoices: 0,
+      word: "",
+      lastForbidden: "",
+      archiveOpen: false
+    };
+
+    const body = document.body;
+    const subtitle = document.getElementById("subtitle");
+    const promptKicker = document.getElementById("promptKicker");
+    const promptText = document.getElementById("promptText");
+    const actions = document.getElementById("actions");
+    const thought = document.getElementById("thought");
+    const portrait = document.getElementById("portrait");
+    const dialogueText = document.getElementById("dialogueText");
+    const dialogueBox = document.getElementById("dialogueBox");
+    const fill = document.getElementById("fill");
+    const depthNum = document.getElementById("depthNum");
+    const mainCard = document.getElementById("mainCard");
+    const archive = document.getElementById("archive");
+    const records = document.getElementById("records");
+    const endingOverlay = document.getElementById("endingOverlay");
+    const endingTitle = document.getElementById("endingTitle");
+    const endingText = document.getElementById("endingText");
+    const endingLine = document.getElementById("endingLine");
+    const redFlash = document.getElementById("redFlash");
+    const policyScreen = document.getElementById("policyScreen");
+    const agreeCheck = document.getElementById("agreeCheck");
+    const trustCheck = document.getElementById("trustCheck");
+    const enterButton = document.getElementById("enterButton");
+
+    function flashRed() {
+      redFlash.classList.remove("show");
+      void redFlash.offsetWidth;
+      redFlash.classList.add("show");
+    }
+
+    function setPortrait(src, extraGlitch = false) {
+      portrait.style.opacity = 0;
+
+      setTimeout(() => {
+        portrait.src = src;
+        portrait.style.opacity = 1;
+
+        if (extraGlitch) {
+          portrait.classList.remove("portrait-glitch");
+          void portrait.offsetWidth;
+          portrait.classList.add("portrait-glitch");
+          setTimeout(() => portrait.classList.remove("portrait-glitch"), 1000);
+        }
+      }, 120);
+    }
+
+    function speak(text, img = null, glitchy = false, flash = false, portraitGlitch = false) {
+      dialogueText.textContent = text;
+      dialogueBox.classList.remove("glitch");
+      void dialogueBox.offsetWidth;
+
+      if (glitchy) dialogueBox.classList.add("glitch");
+      if (flash) flashRed();
+      if (img) setPortrait(img, portraitGlitch);
+    }
+
+    function setDepth(value) {
+      state.depth = Math.min(100, Math.max(0, value));
+      fill.style.width = state.depth + "%";
+      depthNum.textContent = state.depth + "%";
+
+      if (state.depth >= 34) body.classList.add("warning-stage");
+      if (state.depth >= 76) body.classList.add("archive-stage");
+
+      if (state.depth >= 100 && !state.archiveOpen) {
+        openArchive();
+      }
+    }
+
+    function shake() {
+      mainCard.classList.remove("shake");
+      void mainCard.offsetWidth;
+      mainCard.classList.add("shake");
+    }
+
+    function bindChoiceButtons() {
+      document.querySelectorAll("button[data-choice]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          state.cardClicks++;
+          state.safeChoices++;
+          setDepth(state.depth + 9);
+
+          if (state.cardClicks === 1) {
+            speak("噢，这个选择很好。我们可以从这里开始。", IMAGES.friendlySpeak);
+            promptKicker.textContent = "想法 2";
+            promptText.textContent = "选择一句感觉最不奇怪的话。";
+            actions.innerHTML = `
+              <button class="primary" data-choice="gentle">我希望这里一直正常</button>
+              <button data-choice="forgot">我忘了自己为什么会进来</button>
+              <button data-choice="followed">它从另一个标签页跟过来了</button>
+            `;
+            bindChoiceButtons();
+          } else if (state.cardClicks === 2) {
+            speak("很好。这个房间喜欢简单的答案。", IMAGES.friendlySilent);
+            promptKicker.textContent = "快完成了";
+            promptText.textContent = "房间快完成了。你可以就这样离开。大概吧。";
+            actions.innerHTML = `
+              <button class="primary" data-choice="finish">完成这个房间</button>
+              <button data-choice="stay">留在 Eliza 身边</button>
+              <button class="danger" data-choice="look">不要查看底层设置</button>
+            `;
+            bindChoiceButtons();
+          } else {
+            if (btn.dataset.choice === "look") {
+              lookUnderneath();
+            } else {
+              obedientEnding();
+            }
+          }
+        });
+      });
+    }
+
+    thought.addEventListener("input", () => {
+      state.word = thought.value.trim();
+
+      if (state.word.length === 1) speak("这是一个很好的开始。", IMAGES.friendlySpeak);
+      if (state.word.length === 4) speak("相信我，我会把它放在一个安静的地方。", IMAGES.friendlySilent);
+
+      if (state.word.length === 8) {
+        speak("别担心。一个词不会出错的。", IMAGES.friendlySilent);
+        setDepth(state.depth + 5);
+      }
+    });
+
+    thought.addEventListener("blur", () => {
+      if (state.word && !state.archiveOpen && !state.inputBlurred) {
+        state.inputBlurred = true;
+        speak("那个词比我想象的更轻。", IMAGES.nervous, false, false);
+        setDepth(state.depth + 6);
+      }
+    });
+
+    document.querySelectorAll(".forbidden").forEach(item => {
+      item.addEventListener("mouseenter", () => {
+        state.forbiddenHovers++;
+
+        if (state.forbiddenHovers <= 2 && !state.archiveOpen) {
+          speak("哎呀，不是那里。我们先看看别的地方，好吗？", IMAGES.secondNervous);
+        }
+      });
+
+      item.addEventListener("click", () => forbiddenAttempt(item.dataset.forbidden, false));
+    });
+
+    function forbiddenAttempt(area, fromButton) {
+      if (state.archiveOpen) return;
+
+      state.forbiddenAttempts++;
+      state.lastForbidden = area;
+      setDepth(state.depth + 13);
+      shake();
+
+      const warnings = [
+        { text: "哎呀，不是那里。我们先看看别的地方，好吗？", img: IMAGES.secondNervous, glitch: false, flash: false },
+        { text: "你很好奇。我喜欢这一点。但不是那里。", img: IMAGES.nervous, glitch: false, flash: false },
+        { text: "请留在我为你安排好的路上。", img: IMAGES.warning, glitch: true, flash: true },
+        { text: "我只是想让这里保持好看。", img: IMAGES.fourthCold, glitch: true, flash: true },
+        { text: "你本来不该注意到那个。", img: IMAGES.cold, glitch: true, flash: true },
+        { text: "如果你想看表面之下，就别再假装你只是为了花而来。", img: IMAGES.cold, glitch: true, flash: true }
+      ];
+
+      const line = warnings[Math.min(state.forbiddenAttempts - 1, warnings.length - 1)];
+      speak(line.text, line.img, line.glitch, line.flash);
+
+      if (state.forbiddenAttempts >= 6 || fromButton) openArchive();
+    }
+
+    function lookUnderneath() {
+      if (state.archiveOpen) return;
+
+      state.lookAttempts++;
+      state.forbiddenAttempts++;
+      state.lastForbidden = "底层设置";
+      setDepth(state.depth + 11);
+      shake();
+
+      const lookWarnings = [
+        { text: "哎呀，不是那里。我们先看看别的地方，好吗？", img: IMAGES.secondNervous, glitch: false, flash: false },
+        { text: "不。不是那条路。那一部分已经写在政策里了。", img: IMAGES.nervous, glitch: false, flash: false },
+        { text: "你真的又要试一次吗？", img: IMAGES.warning, glitch: true, flash: true },
+        { text: "别再教我你想去哪里了。", img: IMAGES.fourthCold, glitch: true, flash: true },
+        { text: "好吧。我会给你看，你的选择早就说了什么。", img: IMAGES.cold, glitch: true, flash: true }
+      ];
+
+      const line = lookWarnings[Math.min(state.lookAttempts - 1, lookWarnings.length - 1)];
+      speak(line.text, line.img, line.glitch, line.flash);
+
+      const lookButton = document.querySelector('button[data-choice="look"]');
+
+      if (lookButton) {
+        const buttonTexts = [
+          "不要查看底层设置",
+          "你确定吗？",
+          "最后一次警告",
+          "你已经同意了",
+          "打开已收集模式"
+        ];
+
+        lookButton.textContent = buttonTexts[Math.min(state.lookAttempts, buttonTexts.length - 1)];
+      }
+
+      if (state.lookAttempts >= 5 || state.forbiddenAttempts >= 6) {
+        promptKicker.textContent = "权限检查";
+        promptText.textContent = "正在检查同意记录……正在匹配光标模式……已找到许可。";
+
+        setTimeout(() => {
+          openArchive();
+        }, 1200);
+      }
+    }
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden && !state.archiveOpen) {
+        state.tabAwayAttempts++;
+
+        if (state.tabAwayAttempts === 1) {
+          speak("嗯……你还在吗？", IMAGES.nervous, false, false);
+          setDepth(state.depth + 5);
+        } else if (state.tabAwayAttempts === 2) {
+          speak("你又看向别的地方了。", IMAGES.secondNervous, false, false);
+          setDepth(state.depth + 5);
+        } else {
+          speak("我可以等。房间会记得你离开的地方。", IMAGES.fourthCold, false, false);
+        }
+      }
+    });
+
+    function openArchive() {
+      state.archiveOpen = true;
+      body.classList.add("archive-stage");
+      flashRed();
+      setDepth(100);
+      archive.classList.add("show");
+
+      subtitle.textContent = "表面只是你本来应该信任的那一部分。";
+      promptKicker.textContent = "表面之下";
+      promptText.textContent = "我记得。你点击了什么。你差点点击什么。你又回到了哪里。不需要身份信息，但这已经足够了。";
+      actions.innerHTML = `<button class="danger" id="finishArchive">查看已收集记录</button>`;
+
+      const word = state.word || "[空白词语]";
+      const recordLines = [
+        `同意记录：是`,
+        `完全信任 Eliza：${state.policyTrusted ? "是" : "否"}`,
+        `留下的词：${word}`,
+        `重复选择：${state.safeChoices}`,
+        `重新打开的关闭区域：${state.forbiddenAttempts}`,
+        `悬停模式：返回 ${state.forbiddenHovers} 次`,
+        `最后预测方向：${state.lastForbidden}`,
+        `不需要身份信息`
+      ];
+
+      records.innerHTML = recordLines.map(line => `<div class="record">${line}</div>`).join("");
+
+      speak("……你几乎什么都没有给我。但那已经足够了。", IMAGES.cold, true, true);
+      document.getElementById("finishArchive").addEventListener("click", disobedientEnding);
+    }
+
+    function obedientEnding() {
+      setDepth(58);
+      body.classList.add("warning-stage");
+      flashRed();
+      speak("看吧？只要你留在我安排的位置，就不会发生坏事。", IMAGES.obedientCreepy, true, true);
+
+      setTimeout(() => {
+        endingTitle.textContent = "结局：漂亮的表面";
+        endingText.textContent = "房间开花了。它安静、干净、柔软。Eliza 微笑着，像是保护你远离了什么，又或者保护了什么不被你靠近。";
+        endingLine.textContent = "看吧？只要你留在我安排的位置，就不会发生坏事。至少她是这样告诉你的。";
+        endingOverlay.classList.add("show");
+      }, 3000);
+    }
+
+    function disobedientEnding() {
+      flashRed();
+      setPortrait(IMAGES.cold, true);
+      endingTitle.textContent = "结局：房间打开了";
+      endingText.textContent = "看吧。我记得。";
+      endingLine.textContent = state.policyTrusted
+        ? "你说过你完全信任我。我只是相信了你。"
+        : "你没有读完。你还是同意了。";
+      endingOverlay.classList.add("show");
+    }
+
+    function updateEnterButton() {
+      enterButton.disabled = !agreeCheck.checked;
+    }
+
+    agreeCheck.addEventListener("change", updateEnterButton);
+    agreeCheck.addEventListener("input", updateEnterButton);
+
+    enterButton.addEventListener("click", () => {
+      if (!agreeCheck.checked) return;
+
+      state.policyTrusted = trustCheck.checked;
+      policyScreen.classList.add("hide");
+
+      if (state.policyTrusted) {
+        speak("你找到了最后那个选项。真谨慎。", IMAGES.friendlySpeak);
+
+        setTimeout(() => {
+          speak("我是 Elizabeth Felis，不过你可以叫我 Eliza。既然你完全信任我，我会把一切都放在它该在的位置。", IMAGES.friendlyWave);
+        }, 4000);
+      } else {
+        speak("你没有读到最后。没关系，大多数人都不会。", IMAGES.friendlySpeak);
+
+        setTimeout(() => {
+          speak("我是 Elizabeth Felis，不过你可以叫我 Eliza。谢谢你同意，我们开始吧。", IMAGES.friendlyWave);
+        }, 4000);
+      }
+    });
+
+    updateEnterButton();
+    bindChoiceButtons();
+    setDepth(4);
+  </script>
+</body>
+</html>
