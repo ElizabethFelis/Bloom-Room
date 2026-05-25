@@ -49,6 +49,9 @@ The game uses only mouse and keyboard:
 
 This game may contain flashing lights and may track your movements on screen. But don't worry, these are for gaming purposes only. Please do not proceed if you are sensitive to flashing lights.
 
+## demo video
+here is a demo video for the game: https://drive.google.com/file/d/1GiJY2y74ebX2wF4KAXBvuT4U6v-W595V/view?usp=drive_link
+
 ## technology used
 
 This project was made with:
